@@ -37,6 +37,12 @@ cp config.example.env config.env
 
 ## Create and use a workbench
 
+If your checkout does not preserve the executable bit, enable the launcher once:
+
+```bash
+chmod +x agent-sbx.sh
+```
+
 ```bash
 ./agent-sbx.sh create /absolute/path/to/target-repository
 ./agent-sbx.sh shell agent-target-repository
