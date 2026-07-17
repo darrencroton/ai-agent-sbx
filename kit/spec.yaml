@@ -58,7 +58,9 @@ commands:
     - command: |
         set -eu
         apt-get update
-        apt-get install -y --no-install-recommends tmux jq ca-certificates
+        apt-get install -y --no-install-recommends tmux jq ca-certificates ripgrep
+        mkdir -p /etc/qwen-code
+        printf '%s\n' '{"tools":{"useBuiltinRipgrep":false}}' > /etc/qwen-code/settings.json
         su -s /bin/bash agent -c '
           set -euo pipefail
           export PATH="/home/agent/.local/bin:/usr/local/share/npm-global/bin:$PATH"

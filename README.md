@@ -176,3 +176,5 @@ Every configured path must already exist, be absolute, and cannot be `/` or the 
 ## Maintenance
 
 The kit composes `ai-agent-home` and `ai-agent-coder` using public HTTPS clones, avoiding a dependency on host SSH keys. Refresh an existing workbench only when a deliberate toolchain update is wanted; otherwise create a new named workbench from the updated kit.
+
+Qwen Code is configured to use the system `rg` binary rather than its bundled ARM64 ripgrep binary. This avoids a known `jemalloc: Unsupported system page size` failure in some Linux ARM64 microVMs.
