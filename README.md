@@ -69,6 +69,36 @@ Inside the workbench, the installed CLIs are available on `PATH`. Project Manage
   /home/agent/.agents/repos/ai-agent-coder/skills/project-manager/scripts/pm.py profiles
 ```
 
+## Common SBX lifecycle commands
+
+Run these on the host, not inside a sandbox:
+
+```bash
+# List sandboxes and their state.
+./agent-sbx.sh status
+
+# Re-enter a persistent sandbox.
+./agent-sbx.sh shell my-mimic
+
+# Stop a sandbox without deleting its private clone, caches, or login state.
+sbx stop my-mimic
+
+# Start it again by opening a shell.
+./agent-sbx.sh shell my-mimic
+```
+
+To permanently remove a clone-mode sandbox, first preserve any work that has not been integrated into the host repository:
+
+```bash
+# Fetch sandbox branches into refs/sandboxes/my-mimic/ on the host.
+git fetch sandbox-my-mimic
+
+# Permanently remove the sandbox, its private clone, caches, and login state.
+sbx rm my-mimic
+```
+
+`sbx rm` is irreversible. SBX will warn if the sandbox has clone-mode commits that have not been fetched. To give an existing sandbox a narrowly scoped additional network rule, use the host command `sbx policy allow network --sandbox my-mimic example.com`; record the permanent equivalent in `config.env` before creating the next sandbox.
+
 ## Credentials
 
 SBX stores global service credentials in the host OS keychain. They are injected by the host proxy only for the domains declared by the base agent or `kit/spec.yaml`; the VM receives a non-secret placeholder rather than the raw value.
@@ -115,6 +145,23 @@ A GitHub token stored as `sbx secret set -g github` is optional for `gh` and Git
 Set the two approved Tailscale model-server hostnames in the ignored `config.env`. On creation, the launcher renders them into a temporary kit for both the network allowlist and `local-openai` injection entries. They are intentionally not a broad tailnet wildcard, and the public `kit/spec.yaml` never contains your hostnames.
 
 OpenCode and Qwen Code each need an OpenAI-compatible provider entry that points at the required `/v1` endpoint and uses `LLAMA_SERVER_API_KEY`. Keep those client settings inside the workbench; do not copy host credential stores into it.
+
+## Project-specific network and data access
+
+`config.env` is also the private, explicit allowlist for project-specific access. It supports three Bash arrays:
+
+```bash
+# Hosts needed by an additional provider or documented project download.
+EXTRA_NETWORK_DOMAINS=("example-provider.com" "data.example.org")
+
+# Large immutable simulation inputs, exposed read-only in the sandbox.
+READ_ONLY_PATHS=("/absolute/path/to/simulation-data")
+
+# A dedicated results directory, exposed read/write in the sandbox.
+READ_WRITE_PATHS=("/absolute/path/to/mimic-results")
+```
+
+Every configured path must already exist, be absolute, and cannot be `/` or the entire home directory. Paths retain their absolute location inside the sandbox. Prefer a read-only data directory and a separate read/write results directory; do not mount a broad parent directory just for convenience. `chatgpt.com` is already included for Codex. Existing sandboxes keep their original policy and mounts, so create a new named sandbox after changing this configuration.
 
 ## Security model
 

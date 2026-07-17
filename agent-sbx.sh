@@ -31,9 +31,26 @@ prepare_kit() {
   for host in "${MODEL_HOST_1:-}" "${MODEL_HOST_2:-}"; do
     [[ "$host" =~ ^[A-Za-z0-9.-]+$ ]] || { echo "MODEL_HOST_1 and MODEL_HOST_2 must be hostnames only." >&2; exit 2; }
   done
+  declare -p EXTRA_NETWORK_DOMAINS >/dev/null 2>&1 || EXTRA_NETWORK_DOMAINS=()
+  declare -p READ_ONLY_PATHS >/dev/null 2>&1 || READ_ONLY_PATHS=()
+  declare -p READ_WRITE_PATHS >/dev/null 2>&1 || READ_WRITE_PATHS=()
+  extra_network_yaml=""
+  for domain in "${EXTRA_NETWORK_DOMAINS[@]}"; do
+    [[ "$domain" =~ ^[A-Za-z0-9.-]+$ ]] || { echo "EXTRA_NETWORK_DOMAINS entries must be hostnames only." >&2; exit 2; }
+    extra_network_yaml+="    - $domain"$'\n'
+  done
+  mount_args=()
+  for path in "${READ_ONLY_PATHS[@]}"; do
+    [[ "$path" == /* && -d "$path" && "$path" != "/" && "$path" != "$HOME" ]] || { echo "READ_ONLY_PATHS entries must be existing, non-home absolute directories." >&2; exit 2; }
+    mount_args+=("$(cd "$path" && pwd -P):ro")
+  done
+  for path in "${READ_WRITE_PATHS[@]}"; do
+    [[ "$path" == /* && -d "$path" && "$path" != "/" && "$path" != "$HOME" ]] || { echo "READ_WRITE_PATHS entries must be existing, non-home absolute directories." >&2; exit 2; }
+    mount_args+=("$(cd "$path" && pwd -P)")
+  done
   rendered_kit="$(mktemp -d)"
   cp -R "$KIT/." "$rendered_kit"
-  MODEL_HOST_1="$MODEL_HOST_1" MODEL_HOST_2="$MODEL_HOST_2" perl -0pi -e 's/__MODEL_HOST_1__/$ENV{MODEL_HOST_1}/g; s/__MODEL_HOST_2__/$ENV{MODEL_HOST_2}/g' "$rendered_kit/spec.yaml"
+  MODEL_HOST_1="$MODEL_HOST_1" MODEL_HOST_2="$MODEL_HOST_2" EXTRA_NETWORK_YAML="$extra_network_yaml" perl -0pi -e 's/__MODEL_HOST_1__/$ENV{MODEL_HOST_1}/g; s/__MODEL_HOST_2__/$ENV{MODEL_HOST_2}/g; s/    __EXTRA_NETWORK_DOMAINS__\n/$ENV{EXTRA_NETWORK_YAML}/g' "$rendered_kit/spec.yaml"
 }
 
 case "${1:-}" in
@@ -47,7 +64,7 @@ case "${1:-}" in
     [[ -f "$KIT/spec.yaml" ]] || { echo "Missing kit: $KIT/spec.yaml" >&2; exit 1; }
     prepare_kit
     trap 'rm -rf "$rendered_kit"' EXIT
-    sbx create --clone --name "$name" --kit "$rendered_kit" codex "$repo"
+    sbx create --clone --name "$name" --kit "$rendered_kit" codex "$repo" "${mount_args[@]}"
     echo "Created $name. Enter it with: $0 shell $name"
     ;;
   shell)

@@ -23,6 +23,8 @@ caps:
     - objects.githubusercontent.com
     - release-assets.githubusercontent.com
     - github-releases.githubusercontent.com
+    - chatgpt.com
+    __EXTRA_NETWORK_DOMAINS__
     # Model hosts: explicit Tailscale HTTPS endpoints; no wildcard tailnet rule.
     - __MODEL_HOST_1__
     - __MODEL_HOST_2__
