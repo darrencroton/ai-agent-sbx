@@ -1,0 +1,86 @@
+# Local SBX mixin kit for a persistent, multi-harness workbench.
+# Use only from a reviewed local checkout; SBX kits execute install commands as root.
+schemaVersion: "1"
+kind: mixin
+name: agent-workbench
+
+caps:
+  network:
+    allow:
+    # Public source and package hosts used only while bootstrapping.
+    - github.com
+    - raw.githubusercontent.com
+    - api.github.com
+    - registry.npmjs.org
+    - npmjs.com
+    - ports.ubuntu.com
+    - download.docker.com
+    - claude.ai
+    - downloads.claude.ai
+    - opencode.ai
+    - qwen-code-assets.oss-cn-hangzhou.aliyuncs.com
+    - astral.sh
+    - objects.githubusercontent.com
+    - release-assets.githubusercontent.com
+    - github-releases.githubusercontent.com
+    # Model hosts: explicit Tailscale HTTPS endpoints; no wildcard tailnet rule.
+    - macbook.example.ts.net
+    - macstudio.example.ts.net
+    # Harness providers.
+    - api.anthropic.com
+    - api.openai.com
+    - api.github.com
+    - github.com
+    - copilot.github.com
+    - api.githubcopilot.com
+
+credentials:
+  - service: local-openai
+    apiKey:
+      name: LLAMA_SERVER_API_KEY
+      proxyManaged: true
+      inject:
+        - domain: macbook.example.ts.net
+          header: Authorization
+          format: "Bearer %s"
+        - domain: macstudio.example.ts.net
+          header: Authorization
+          format: "Bearer %s"
+
+environment:
+  variables:
+    AGENT_HOME: /home/agent/.agents
+
+commands:
+  install:
+    - command: |
+        set -eu
+        apt-get update
+        apt-get install -y --no-install-recommends tmux jq ca-certificates
+        su -s /bin/bash agent -c '
+          set -euo pipefail
+          export PATH="/home/agent/.local/bin:/usr/local/share/npm-global/bin:$PATH"
+          uv python install 3.13
+          npm install --global @anthropic-ai/claude-code @github/copilot @qwen-code/qwen-code
+          curl -fsSL https://opencode.ai/install | bash
+          ln -sfn /home/agent/.opencode/bin/opencode /home/agent/.local/bin/opencode
+          git clone --depth 1 https://github.com/darrencroton/ai-agent-home.git /home/agent/.agents
+          mkdir -p /home/agent/.agents/repos /home/agent/.agents/skills
+          git clone --depth 1 https://github.com/darrencroton/ai-agent-coder.git /home/agent/.agents/repos/ai-agent-coder
+          for skill in /home/agent/.agents/home-skills/* /home/agent/.agents/repos/ai-agent-coder/skills/*; do
+            test -f "$skill/SKILL.md" || continue
+            ln -s "$skill" "/home/agent/.agents/skills/$(basename "$skill")"
+          done
+          mkdir -p /home/agent/.claude /home/agent/.codex /home/agent/.config/opencode /home/agent/.copilot /home/agent/.qwen
+          ln -sfn /home/agent/.agents/AGENTS.md /home/agent/.claude/CLAUDE.md
+          ln -sfn /home/agent/.agents/skills /home/agent/.claude/skills
+          ln -sfn /home/agent/.agents/AGENTS.md /home/agent/.codex/AGENTS.md
+          ln -sfn /home/agent/.agents/skills /home/agent/.codex/skills
+          ln -sfn /home/agent/.agents/AGENTS.md /home/agent/.config/opencode/AGENTS.md
+          ln -sfn /home/agent/.agents/skills /home/agent/.config/opencode/skills
+          ln -sfn /home/agent/.agents/AGENTS.md /home/agent/.copilot/copilot-instructions.md
+          ln -sfn /home/agent/.agents/skills /home/agent/.copilot/skills
+          ln -sfn /home/agent/.agents/AGENTS.md /home/agent/.qwen/QWEN.md
+          ln -sfn /home/agent/.agents/skills /home/agent/.qwen/skills
+        '
+      description: "Install the harnesses and compose the shared skill catalogue in order"
