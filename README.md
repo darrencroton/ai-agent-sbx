@@ -6,9 +6,10 @@ The workbench is persistent for dependency and tool caches, but each target repo
 
 ## Contents
 
-- `agent-sbx.sh` creates, enters, and lists named workbenches.
+- `agent-sbx.sh` creates, enters, refreshes network rules for, and lists named workbenches.
 - `kit/spec.yaml` is the local SBX mixin kit. It installs the additional harnesses, tmux, Python 3.13, and the shared `ai-agent-home`/`ai-agent-coder` skill catalogue.
 - `config.example.env` is the non-secret model-host configuration template. Copy it to the ignored `config.env` before creating a workbench.
+- `sandbox.bashrc` is an optional ignored private Bash profile for portable shell conveniences inside a workbench.
 
 ## Requirements
 
@@ -28,10 +29,10 @@ Validate the kit before first use and whenever it changes:
 sbx kit validate kit
 ```
 
-Create the local model-host configuration. This file contains hostnames only; API credentials remain in SBX secrets.
+Create the local model-host configuration once. This file contains hostnames and your explicit project-access allowlists only; API credentials remain in SBX secrets. Do not overwrite an existing `config.env`.
 
 ```bash
-cp config.example.env config.env
+[[ -f config.env ]] || cp config.example.env config.env
 # Edit config.env and replace both example hostnames.
 ```
 
@@ -50,11 +51,11 @@ chmod +x agent-sbx.sh
 # Or choose a stable name explicitly.
 ./agent-sbx.sh create /absolute/path/to/target-repository my-mimic
 
-# Open an interactive Bash terminal in that sandbox and its private clone.
-./agent-sbx.sh shell agent-target-repository
+# Open an interactive Bash terminal in the sandbox and its private clone.
+./agent-sbx.sh shell my-mimic
 ```
 
-`create` expects an existing local Git checkout (including a linked Git worktree). It does not modify that checkout or give the sandbox write access to it. In clone mode, SBX exposes the checkout read-only only long enough to create a separate private Git clone inside the VM. That private clone is the working directory for all harnesses; commits made there can be fetched back through the sandbox remote before the sandbox is removed.
+`create` expects an existing local Git checkout (including a linked Git worktree). It does not modify that checkout or give the sandbox write access to it. In clone mode, SBX creates a separate private Git clone inside the VM for all work and leaves the host checkout available read-only at `/run/sandbox/source`. Commits made in the private clone can be fetched back through the sandbox remote before the sandbox is removed.
 
 The target path is required. To work on a GitHub repository that is not on disk yet, clone it on the host first, then pass its local path. You can clone additional repositories inside a workbench, but those clones are not managed by SBX clone mode and will not receive a sandbox remote automatically.
 
@@ -68,6 +69,10 @@ Inside the workbench, the installed CLIs are available on `PATH`. Project Manage
 /home/agent/.local/bin/uv run --python 3.13 python \
   /home/agent/.agents/repos/ai-agent-coder/skills/project-manager/scripts/pm.py profiles
 ```
+
+### Optional private shell profile
+
+If `sandbox.bashrc` exists beside the launcher, it is copied to `/home/agent/.bashrc` whenever `create` or `shell` runs. The file is ignored by Git. The launcher therefore owns that sandbox file: edit the private host-side `sandbox.bashrc`, not the copy inside the VM. Use it only for portable shell convenience such as aliases and history settings; do not copy a full host `.zshrc`, credentials, SSH aliases, macOS paths, or host-control functions into the sandbox.
 
 ## Common SBX lifecycle commands
 
@@ -164,17 +169,19 @@ READ_ONLY_PATHS=("/absolute/path/to/simulation-data")
 READ_WRITE_PATHS=("/absolute/path/to/mimic-results")
 ```
 
-Every configured path must already exist, be absolute, and cannot be `/` or the entire home directory. Paths retain their absolute location inside the sandbox. Prefer a read-only data directory and a separate read/write results directory; do not mount a broad parent directory just for convenience. `chatgpt.com` is already included for Codex. Existing sandboxes keep their original policy and mounts, so create a new named sandbox after changing this configuration.
+Every configured path must already exist, be absolute, and cannot be `/` or the entire home directory. Paths retain their absolute location inside the sandbox. Prefer a read-only data directory and a separate read/write results directory; do not mount a broad parent directory just for convenience. `chatgpt.com` is already included for Codex.
+
+Configuration changes have two different effects: after changing only `EXTRA_NETWORK_DOMAINS`, run `./agent-sbx.sh refresh <sandbox-name>` to apply the additional scoped network rules to an existing sandbox. After changing model hosts, model credentials, or either path array, create a new named sandbox because those are creation-time boundaries.
 
 ## Security model
 
 - Clone mode keeps the host worktree read-only. Review and fetch the sandbox branch before integrating changes locally.
-- Outbound network access is deny-by-default. `kit/spec.yaml` is the allowlist and should be reviewed like privileged build configuration.
+- Outbound network access is deny-by-default. The public `kit/spec.yaml` plus the private values rendered from `config.env` form the allowlist and should be reviewed like privileged build configuration.
 - Kit installation commands run as root during sandbox creation. Keep this repository local and version-controlled; do not load unreviewed remote kits.
 - SBX kits are Early Access. Revalidate the kit after upgrading SBX and recreate a workbench after changing the kit or global credentials.
 
 ## Maintenance
 
-The kit composes `ai-agent-home` and `ai-agent-coder` using public HTTPS clones, avoiding a dependency on host SSH keys. Refresh an existing workbench only when a deliberate toolchain update is wanted; otherwise create a new named workbench from the updated kit.
+The kit composes `ai-agent-home` and `ai-agent-coder` using public HTTPS clones, avoiding a dependency on host SSH keys. Use `refresh` only to apply an updated network allowlist to an existing sandbox. Create a new named workbench after a kit, toolchain, mount, model-host, or credential change.
 
 Qwen Code is configured to use the system `rg` binary rather than its bundled ARM64 ripgrep binary. This avoids a known `jemalloc: Unsupported system page size` failure in some Linux ARM64 microVMs.

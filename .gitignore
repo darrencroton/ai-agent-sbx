@@ -2,6 +2,7 @@
 .env
 .env.*
 config.env
+sandbox.bashrc
 *.log
 *.tmp
 *.lock

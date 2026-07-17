@@ -23,6 +23,11 @@ require_sbx() {
   command -v sbx >/dev/null || { echo "sbx is not installed or not on PATH." >&2; exit 1; }
 }
 
+install_shell_profile() {
+  [[ -f "$SCRIPT_DIR/sandbox.bashrc" ]] || return 0
+  sbx cp "$SCRIPT_DIR/sandbox.bashrc" "$1:/home/agent/.bashrc"
+}
+
 load_config() {
   [[ -f "$CONFIG" ]] || { echo "Missing $CONFIG. Copy config.example.env and set the approved model hosts." >&2; exit 1; }
   set -a
@@ -70,6 +75,7 @@ case "${1:-}" in
     prepare_kit
     trap 'rm -rf "$rendered_kit"' EXIT
     sbx create --clone --name "$name" --kit "$rendered_kit" codex "$repo" "${mount_args[@]}"
+    install_shell_profile "$name"
     echo "Created $name. Enter it with: $0 shell $name"
     ;;
   refresh)
@@ -87,6 +93,7 @@ case "${1:-}" in
     name="${2:-}"
     [[ -n "$name" ]] || { usage; exit 2; }
     require_sbx
+    install_shell_profile "$name"
     sbx exec -it "$name" bash
     ;;
   status)
