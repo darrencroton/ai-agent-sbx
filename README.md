@@ -8,6 +8,7 @@ The workbench is persistent for dependency and tool caches, but each target repo
 
 - `agent-sbx.sh` creates, enters, and lists named workbenches.
 - `kit/spec.yaml` is the local SBX mixin kit. It installs the additional harnesses, tmux, Python 3.13, and the shared `ai-agent-home`/`ai-agent-coder` skill catalogue.
+- `config.example.env` is the non-secret model-host configuration template. Copy it to the ignored `config.env` before creating a workbench.
 
 ## Requirements
 
@@ -25,6 +26,13 @@ Validate the kit before first use and whenever it changes:
 
 ```bash
 sbx kit validate kit
+```
+
+Create the local model-host configuration. This file contains hostnames only; API credentials remain in SBX secrets.
+
+```bash
+cp config.example.env config.env
+# Edit config.env and replace both example hostnames.
 ```
 
 ## Create and use a workbench
@@ -88,7 +96,7 @@ A GitHub token stored as `sbx secret set -g github` is optional for `gh` and Git
 
 ## Model endpoints
 
-The kit uses two explicit placeholder Tailscale HTTPS endpoints, `macbook.example.ts.net` and `macstudio.example.ts.net`. Replace those values in both the network allowlist and `local-openai` injection entries in `kit/spec.yaml` with the approved model-server hostnames before creating a workbench. They are intentionally not a broad tailnet wildcard.
+Set the two approved Tailscale model-server hostnames in the ignored `config.env`. On creation, the launcher renders them into a temporary kit for both the network allowlist and `local-openai` injection entries. They are intentionally not a broad tailnet wildcard, and the public `kit/spec.yaml` never contains your hostnames.
 
 OpenCode and Qwen Code each need an OpenAI-compatible provider entry that points at the required `/v1` endpoint and uses `LLAMA_SERVER_API_KEY`. Keep those client settings inside the workbench; do not copy host credential stores into it.
 

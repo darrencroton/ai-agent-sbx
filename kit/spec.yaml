@@ -24,8 +24,8 @@ caps:
     - release-assets.githubusercontent.com
     - github-releases.githubusercontent.com
     # Model hosts: explicit Tailscale HTTPS endpoints; no wildcard tailnet rule.
-    - macbook.example.ts.net
-    - macstudio.example.ts.net
+    - __MODEL_HOST_1__
+    - __MODEL_HOST_2__
     # Harness providers.
     - api.anthropic.com
     - api.openai.com
@@ -40,10 +40,10 @@ credentials:
       name: LLAMA_SERVER_API_KEY
       proxyManaged: true
       inject:
-        - domain: macbook.example.ts.net
+        - domain: __MODEL_HOST_1__
           header: Authorization
           format: "Bearer %s"
-        - domain: macstudio.example.ts.net
+        - domain: __MODEL_HOST_2__
           header: Authorization
           format: "Bearer %s"
 
