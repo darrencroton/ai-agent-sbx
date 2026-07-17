@@ -85,6 +85,9 @@ sbx stop my-mimic
 
 # Start it again by opening a shell.
 ./agent-sbx.sh shell my-mimic
+
+# Apply the current config.env network allowlist to this existing sandbox.
+./agent-sbx.sh refresh my-mimic
 ```
 
 To permanently remove a clone-mode sandbox, first preserve any work that has not been integrated into the host repository:
@@ -97,7 +100,7 @@ git fetch sandbox-my-mimic
 sbx rm my-mimic
 ```
 
-`sbx rm` is irreversible. SBX will warn if the sandbox has clone-mode commits that have not been fetched. To give an existing sandbox a narrowly scoped additional network rule, use the host command `sbx policy allow network --sandbox my-mimic example.com`; record the permanent equivalent in `config.env` before creating the next sandbox.
+`sbx rm` is irreversible. SBX will warn if the sandbox has clone-mode commits that have not been fetched. `refresh` updates only an existing sandbox's scoped network rules. Model hosts and credentials, installed tools, and read-only/read-write path mounts are creation-time boundaries, so change those by creating a new named sandbox.
 
 ## Credentials
 

@@ -11,6 +11,7 @@ usage() {
 Usage:
   agent-sbx.sh create <target-repo> [sandbox-name]
   agent-sbx.sh shell <sandbox-name>
+  agent-sbx.sh refresh <sandbox-name>
   agent-sbx.sh status
 
 create uses SBX clone mode: agents work in a private in-VM clone and the host
@@ -22,7 +23,7 @@ require_sbx() {
   command -v sbx >/dev/null || { echo "sbx is not installed or not on PATH." >&2; exit 1; }
 }
 
-prepare_kit() {
+load_config() {
   [[ -f "$CONFIG" ]] || { echo "Missing $CONFIG. Copy config.example.env and set the approved model hosts." >&2; exit 1; }
   set -a
   # shellcheck disable=SC1090
@@ -48,9 +49,13 @@ prepare_kit() {
     [[ "$path" == /* && -d "$path" && "$path" != "/" && "$path" != "$HOME" ]] || { echo "READ_WRITE_PATHS entries must be existing, non-home absolute directories." >&2; exit 2; }
     mount_args+=("$(cd "$path" && pwd -P)")
   done
+}
+
+prepare_kit() {
+  load_config
   rendered_kit="$(mktemp -d)"
   cp -R "$KIT/." "$rendered_kit"
-  MODEL_HOST_1="$MODEL_HOST_1" MODEL_HOST_2="$MODEL_HOST_2" EXTRA_NETWORK_YAML="$extra_network_yaml" perl -0pi -e 's/__MODEL_HOST_1__/$ENV{MODEL_HOST_1}/g; s/__MODEL_HOST_2__/$ENV{MODEL_HOST_2}/g; s/    __EXTRA_NETWORK_DOMAINS__\n/$ENV{EXTRA_NETWORK_YAML}/g' "$rendered_kit/spec.yaml"
+  MODEL_HOST_1="$MODEL_HOST_1" MODEL_HOST_2="$MODEL_HOST_2" EXTRA_NETWORK_YAML="$extra_network_yaml" perl -0pi -e 's/__MODEL_HOST_1__/$ENV{MODEL_HOST_1}/g; s/__MODEL_HOST_2__/$ENV{MODEL_HOST_2}/g; s/    # __EXTRA_NETWORK_DOMAINS__\n/$ENV{EXTRA_NETWORK_YAML}/g' "$rendered_kit/spec.yaml"
 }
 
 case "${1:-}" in
@@ -66,6 +71,17 @@ case "${1:-}" in
     trap 'rm -rf "$rendered_kit"' EXIT
     sbx create --clone --name "$name" --kit "$rendered_kit" codex "$repo" "${mount_args[@]}"
     echo "Created $name. Enter it with: $0 shell $name"
+    ;;
+  refresh)
+    name="${2:-}"
+    [[ -n "$name" ]] || { usage; exit 2; }
+    require_sbx
+    load_config
+    domains=("chatgpt.com" "$MODEL_HOST_1" "$MODEL_HOST_2" "${EXTRA_NETWORK_DOMAINS[@]}")
+    domain_list="$(IFS=,; echo "${domains[*]}")"
+    sbx policy allow network --sandbox "$name" "$domain_list"
+    echo "Refreshed the scoped network allowlist for $name."
+    echo "Changing model hosts, credentials, tools, or READ_ONLY_PATHS/READ_WRITE_PATHS requires a new sandbox."
     ;;
   shell)
     name="${2:-}"
