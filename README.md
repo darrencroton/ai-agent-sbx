@@ -94,17 +94,17 @@ Enter a secret value only at the interactive prompt. Do not supply it on a comma
 
 `local-openai` supplies the placeholder environment variable `LLAMA_SERVER_API_KEY` and injects it as an `Authorization: Bearer` header solely for the configured model hosts. It is optional when those hosts do not require authentication.
 
-### Interactive subscription and provider sign-in
+### Subscription and provider sign-in
 
-After creating a workbench, open a shell in it and authenticate each harness/provider that will be used:
+Complete the Codex OAuth step on the host before creating a workbench. After creating it, open a shell inside it and authenticate each other harness/provider that will be used:
 
-| Tool | First interactive action | Notes |
-| --- | --- | --- |
-| Codex | None after `sbx secret set -g openai --oauth` | OAuth is completed on the host before sandbox creation. |
-| Claude Code | Run `claude`, then `/login` | A Claude subscription is OAuth state, not an Anthropic API key. |
-| Copilot CLI | Run `copilot login` or `/login` | Complete the GitHub device/OAuth flow for the subscribed GitHub account. |
-| OpenCode | Run `opencode`, then use its provider sign-in flow | Complete a provider login for each subscribed provider required, including GitHub Copilot models or OpenCode Go. |
-| Qwen Code | Run `qwen`, then `/auth` | Choose and authenticate the intended provider. |
+| Tool | Where to authenticate | First action | Notes |
+| --- | --- | --- | --- |
+| Codex | Host, before creation | `sbx secret set -g openai --oauth` | OAuth is injected into the sandbox by SBX; do not run `sbx` inside the sandbox. |
+| Claude Code | Inside the sandbox | Run `claude`, then `/login` | A Claude subscription is OAuth state, not an Anthropic API key. |
+| Copilot CLI | Inside the sandbox | Run `copilot login` or `/login` | Complete the GitHub device/OAuth flow for the subscribed GitHub account. |
+| OpenCode | Inside the sandbox | Run `opencode`, then use its provider sign-in flow | Complete a provider login for each subscribed provider required, including GitHub Copilot models or OpenCode Go. |
+| Qwen Code | Inside the sandbox | Run `qwen`, then `/auth` | Choose and authenticate the intended provider. |
 
 Do this before launching a harness through Project Manager. Interactive OAuth state belongs to the named workbench and is retained while that sandbox is retained. A new workbench needs its own initial sign-in; it does not copy host-side OpenCode, Qwen, Claude, or Copilot configuration directories.
 
