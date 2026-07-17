@@ -39,7 +39,8 @@ prepare_kit() {
 case "${1:-}" in
   create)
     repo="${2:-}"
-    [[ -n "$repo" && -d "$repo/.git" ]] || { echo "create needs a Git worktree path." >&2; exit 2; }
+    [[ -n "$repo" && -d "$repo" ]] || { echo "create needs a Git worktree path." >&2; exit 2; }
+    git -C "$repo" rev-parse --is-inside-work-tree >/dev/null 2>&1 || { echo "create needs a Git worktree path." >&2; exit 2; }
     repo="$(cd "$repo" && pwd)"
     name="${3:-agent-$(basename "$repo")}" 
     require_sbx

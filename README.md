@@ -44,11 +44,21 @@ chmod +x agent-sbx.sh
 ```
 
 ```bash
+# Let the launcher derive a name such as agent-mimic.
 ./agent-sbx.sh create /absolute/path/to/target-repository
+
+# Or choose a stable name explicitly.
+./agent-sbx.sh create /absolute/path/to/target-repository my-mimic
+
+# Open an interactive Bash terminal in that sandbox and its private clone.
 ./agent-sbx.sh shell agent-target-repository
 ```
 
-The sandbox name is optional. Reuse a name to retain its VM-local caches and private clone; choose a new name for a clean environment.
+`create` expects an existing local Git checkout (including a linked Git worktree). It does not modify that checkout or give the sandbox write access to it. In clone mode, SBX exposes the checkout read-only only long enough to create a separate private Git clone inside the VM. That private clone is the working directory for all harnesses; commits made there can be fetched back through the sandbox remote before the sandbox is removed.
+
+The target path is required. To work on a GitHub repository that is not on disk yet, clone it on the host first, then pass its local path. You can clone additional repositories inside a workbench, but those clones are not managed by SBX clone mode and will not receive a sandbox remote automatically.
+
+The second `create` argument is the optional sandbox name. Without it, the launcher derives `agent-<repository-directory-name>`; for example, `~/Local/git-repos/mimic` becomes `agent-mimic`. Reuse a name to retain its VM-local caches and private clone; choose a new name for a clean environment.
 
 The first creation downloads the official SBX image and installs the harnesses, so it can take several minutes. Leave the creating terminal attached until it reports `Created sandbox`; do not interrupt it or open a short-lived session during that initial bootstrap.
 
