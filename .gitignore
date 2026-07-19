@@ -3,6 +3,8 @@
 .env.*
 config.env
 sandbox.bashrc
+sandbox.opencode
+sandbox.qwen
 *.log
 *.tmp
 *.lock

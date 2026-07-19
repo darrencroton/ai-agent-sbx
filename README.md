@@ -9,7 +9,7 @@ The workbench is persistent for dependency and tool caches, but each target repo
 - `agent-sbx.sh` creates, enters, refreshes network rules for, and lists named workbenches.
 - `kit/spec.yaml` is the local SBX mixin kit. It installs the additional harnesses, tmux, Python 3.13, and the shared `ai-agent-home`/`ai-agent-coder` skill catalogue.
 - `config.example.env` is the non-secret model-host configuration template. Copy it to the ignored `config.env` before creating a workbench.
-- `sandbox.bashrc` is an optional ignored private Bash profile for portable shell conveniences inside a workbench.
+- `sandbox.bashrc`, `sandbox.opencode`, and `sandbox.qwen` are optional ignored private configuration files copied into a workbench.
 
 ## Requirements
 
@@ -70,9 +70,19 @@ Inside the workbench, the installed CLIs are available on `PATH`. Project Manage
   /home/agent/.agents/repos/ai-agent-coder/skills/project-manager/scripts/pm.py profiles
 ```
 
-### Optional private shell profile
+### Optional private configuration
 
-If `sandbox.bashrc` exists beside the launcher, it is copied to `/home/agent/.bashrc` whenever `create` or `shell` runs. The file is ignored by Git. The launcher therefore owns that sandbox file: edit the private host-side `sandbox.bashrc`, not the copy inside the VM. Use it only for portable shell convenience such as aliases and history settings; do not copy a full host `.zshrc`, credentials, SSH aliases, macOS paths, or host-control functions into the sandbox.
+Whenever `create` or `shell` runs, the launcher copies any of these files that exist beside it to their corresponding paths in the workbench:
+
+| Host-side file | Workbench path |
+| --- | --- |
+| `sandbox.bashrc` | `/home/agent/.bashrc` |
+| `sandbox.opencode` | `/home/agent/.config/opencode/opencode.json` |
+| `sandbox.qwen` | `/home/agent/.qwen/settings.json` |
+
+These files are ignored by Git and owned by the launcher: edit the private host-side file, not its copy inside the VM. The generic install helper in `agent-sbx.sh` makes another tool configuration a single source-to-destination mapping when Claude Code or Codex needs the same treatment later.
+
+Use `sandbox.bashrc` only for portable shell conveniences such as aliases and history settings; do not copy a full host `.zshrc`, credentials, SSH aliases, macOS paths, or host-control functions into the sandbox. Keep secrets out of all three files. OpenCode and Qwen settings should refer to credentials supplied through SBX or environment variables rather than containing credential values.
 
 ## Common SBX lifecycle commands
 
@@ -144,7 +154,7 @@ Complete the Codex OAuth step on the host before creating a workbench. After cre
 | OpenCode | Inside the sandbox | Run `opencode`, then use its provider sign-in flow | Complete a provider login for each subscribed provider required, including GitHub Copilot models or OpenCode Go. |
 | Qwen Code | Inside the sandbox | Run `qwen`, then `/auth` | Choose and authenticate the intended provider. |
 
-Do this before launching a harness through Project Manager. Interactive OAuth state belongs to the named workbench and is retained while that sandbox is retained. A new workbench needs its own initial sign-in; it does not copy host-side OpenCode, Qwen, Claude, or Copilot configuration directories.
+Do this before launching a harness through Project Manager. Interactive OAuth state belongs to the named workbench and is retained while that sandbox is retained. A new workbench needs its own initial sign-in. The optional OpenCode and Qwen settings files described above do not copy either tool's authentication state or its entire host configuration directory.
 
 A GitHub token stored as `sbx secret set -g github` is optional for `gh` and GitHub API automation. It is not the Copilot subscription itself. Similarly, only create an `anthropic` SBX secret when Anthropic API-key billing is intended.
 
@@ -152,7 +162,7 @@ A GitHub token stored as `sbx secret set -g github` is optional for `gh` and Git
 
 Set the two approved Tailscale model-server hostnames in the ignored `config.env`. On creation, the launcher renders them into a temporary kit for both the network allowlist and `local-openai` injection entries. They are intentionally not a broad tailnet wildcard, and the public `kit/spec.yaml` never contains your hostnames.
 
-OpenCode and Qwen Code each need an OpenAI-compatible provider entry that points at the required `/v1` endpoint and uses `LLAMA_SERVER_API_KEY`. Keep those client settings inside the workbench; do not copy host credential stores into it.
+OpenCode and Qwen Code each need an OpenAI-compatible provider entry that points at the required `/v1` endpoint and uses `LLAMA_SERVER_API_KEY`. These client settings can be managed through the ignored `sandbox.opencode` and `sandbox.qwen` files; do not copy host credential stores into the workbench.
 
 ## Project-specific network and data access
 

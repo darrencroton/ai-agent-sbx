@@ -23,9 +23,20 @@ require_sbx() {
   command -v sbx >/dev/null || { echo "sbx is not installed or not on PATH." >&2; exit 1; }
 }
 
-install_shell_profile() {
-  [[ -f "$SCRIPT_DIR/sandbox.bashrc" ]] || return 0
-  sbx cp "$SCRIPT_DIR/sandbox.bashrc" "$1:/home/agent/.bashrc"
+install_private_file() {
+  local sandbox_name="$1"
+  local source_name="$2"
+  local destination="$3"
+
+  [[ -f "$SCRIPT_DIR/$source_name" ]] || return 0
+  sbx exec "$sandbox_name" mkdir -p "$(dirname "$destination")"
+  sbx cp "$SCRIPT_DIR/$source_name" "$sandbox_name:$destination"
+}
+
+install_private_files() {
+  install_private_file "$1" "sandbox.bashrc" "/home/agent/.bashrc"
+  install_private_file "$1" "sandbox.opencode" "/home/agent/.config/opencode/opencode.json"
+  install_private_file "$1" "sandbox.qwen" "/home/agent/.qwen/settings.json"
 }
 
 load_config() {
@@ -75,7 +86,7 @@ case "${1:-}" in
     prepare_kit
     trap 'rm -rf "$rendered_kit"' EXIT
     sbx create --clone --name "$name" --kit "$rendered_kit" codex "$repo" "${mount_args[@]}"
-    install_shell_profile "$name"
+    install_private_files "$name"
     echo "Created $name. Enter it with: $0 shell $name"
     ;;
   refresh)
@@ -93,7 +104,7 @@ case "${1:-}" in
     name="${2:-}"
     [[ -n "$name" ]] || { usage; exit 2; }
     require_sbx
-    install_shell_profile "$name"
+    install_private_files "$name"
     sbx exec -it "$name" bash
     ;;
   status)
